@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Round Robin CPU Scheduler Simulator</title>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700&family=Figtree:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f1f3f8;--card:#fff;--ink:#1c2233;--mute:#5f6a85;--line:#d6dbe8;--a:#4f46e5;--b:#0f9f8f;--bad:#c62f3b;--badbg:#fde5e7;--ok:#2d8a4e;--soft:#f6f7fb;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#10131c;--card:#181d2a;--ink:#e7eaf5;--mute:#98a2bf;--line:#2b3347;--a:#8b85ff;--b:#3fd1bf;--bad:#ff6b76;--badbg:#401a1e;--ok:#5fd18a;--soft:#131826}}
+:root[data-theme="dark"]{--bg:#10131c;--card:#181d2a;--ink:#e7eaf5;--mute:#98a2bf;--line:#2b3347;--a:#8b85ff;--b:#3fd1bf;--bad:#ff6b76;--badbg:#401a1e;--ok:#5fd18a;--soft:#131826}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 Figtree,system-ui,sans-serif}
+h1,h2{font-family:'Bricolage Grotesque',Georgia,serif;margin:0}h1{font-size:clamp(24px,4vw,34px);line-height:1.1}h2{font-size:17px;margin-bottom:10px}
+.wrap{max-width:1100px;margin:0 auto;padding:20px 16px 40px}.sub{color:var(--mute);margin:6px 0 16px;max-width:72ch}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:14px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px 18px}
+label{display:block;font-size:13px;color:var(--mute)}label b{color:var(--ink);float:right}
+input[type=range]{width:100%;accent-color:var(--a)}
+input[type=number]{width:64px;font:inherit;padding:4px 6px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--ink)}
+.btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;align-items:center}
+button{font:inherit;font-weight:600;border:1px solid var(--line);background:var(--card);color:var(--ink);padding:7px 13px;border-radius:8px;cursor:pointer}
+button.main{background:var(--a);color:#fff;border-color:var(--a)}
+button:focus-visible,input:focus-visible{outline:3px solid var(--b);outline-offset:2px}
+.pr{display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:6px 0;border-bottom:1px solid var(--line)}
+.dot{display:inline-block;min-width:38px;text-align:center;color:#fff;font-weight:700;border-radius:6px;padding:2px 6px}
+.pr label{display:flex;align-items:center;gap:6px}.note{font-size:13.5px;color:var(--mute)}
+.live{display:grid;grid-template-columns:auto 1fr;gap:12px 18px;align-items:center;margin-bottom:12px}
+@media(max-width:640px){.live{grid-template-columns:1fr}}
+.clock{font-family:'Bricolage Grotesque',serif;font-size:34px;line-height:1}.clock small{font-size:13px;color:var(--mute);font-family:Figtree,sans-serif}
+.cpu{border:2px solid var(--line);border-radius:10px;padding:8px 12px;background:var(--soft);min-height:62px}
+.cpu small{color:var(--mute);display:block;font-size:12px}
+.bar{height:6px;border-radius:4px;background:var(--line);overflow:hidden;margin-top:6px}.bar i{display:block;height:100%;background:var(--b)}
+.qrow{display:flex;gap:6px;flex-wrap:wrap;align-items:center;min-height:36px}
+.chip{color:#fff;font-weight:700;border-radius:6px;padding:3px 10px}
+.gw{overflow-x:auto;border:1px solid var(--line);border-radius:8px;background:var(--soft);padding:4px 0}
+.tk{font-size:11px;fill:var(--mute)}.gl{font-size:12px;font-weight:700;fill:#fff}
+#log{font-size:13.5px;margin-top:10px;max-height:150px;overflow:auto;color:var(--mute)}#log div:last-child{color:var(--ink);font-weight:600}
+.tw{overflow-x:auto}table{border-collapse:collapse;width:100%;min-width:600px;font-size:14px}
+th,td{text-align:left;padding:6px 9px;border-bottom:1px solid var(--line)}th{color:var(--mute);font-size:12.5px;font-weight:600}
+.st{font-size:12px;font-weight:600;padding:2px 8px;border-radius:99px;border:1px solid var(--line)}
+.st.run{background:var(--a);color:#fff;border-color:var(--a)}.st.done{color:var(--ok);border-color:var(--ok)}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-top:12px}
+.stat{padding:8px 10px;border-radius:8px;background:var(--soft);border:1px solid var(--line)}
+.stat small{color:var(--mute);display:block;font-size:12px}.stat strong{font:700 22px 'Bricolage Grotesque',serif}
+.chart{width:100%;height:210px;background:var(--soft);border:1px solid var(--line);border-radius:8px;display:block}
+.leg{font-size:13px;color:var(--mute);margin-top:6px;display:flex;gap:14px;flex-wrap:wrap}.leg i{display:inline-block;width:14px;height:4px;border-radius:2px;margin-right:5px;vertical-align:middle}
+.ins li{margin-bottom:6px}.win{color:var(--ok);font-weight:700}
+</style></head><body><div class="wrap">
+<h1>Round Robin CPU scheduler</h1>
+<p class="sub">Time-sliced scheduling with a narrated step-through. Beyond the Gantt chart it models context-switch cost, finds the best quantum for your workload automatically, and compares the result with FCFS.</p>
+
+<div class="panel"><h2>Setup</h2>
+<div class="grid">
+<label>Time quantum <b id="vq"></b><input type="range" id="q" min="1" max="12" value="3"></label>
+<label>Context-switch cost <b id="vc"></b><input type="range" id="cs" min="0" max="3" value="0"></label>
+<label>Playback speed <b id="vs"></b><input type="range" id="sp" min="1" max="10" value="5"></label>
+</div>
+<div class="btns"><span class="note">Scenarios:</span>
+<button onclick="pre(0)">Textbook</button><button onclick="pre(1)">Convoy effect</button><button onclick="pre(2)">CPU idle gaps</button><button onclick="pre(3)">Switch overhead</button><button onclick="rand()">Random</button></div>
+<div id="rows" style="margin-top:10px"></div>
+<div class="btns"><button onclick="addP()" id="addb">+ Add process</button></div></div>
+
+<div class="panel"><h2>Live simulation</h2>
+<div class="live"><div class="clock" id="clk"></div><div class="cpu" id="cpu"></div></div>
+<div class="note" style="margin-bottom:4px">Ready queue (front → back)</div><div class="qrow" id="rq"></div>
+<div class="btns"><button class="main" id="play">Play</button><button id="step">Next event</button><button id="fin">Finish</button><button id="rst">Restart</button></div>
+<div class="gw" style="margin-top:12px" id="gw"></div><div id="log" aria-live="polite"></div></div>
+
+<div class="panel"><h2>Processes and results</h2><div class="tw" id="res"></div><div class="stats" id="stats"></div></div>
+<div class="panel"><h2>Quantum explorer</h2><svg class="chart" id="chart" viewBox="0 0 620 210" preserveAspectRatio="none"></svg>
+<div class="leg"><span><i style="background:var(--a)"></i>average waiting time</span><span><i style="background:var(--b)"></i>average response time</span><span id="best"></span></div>
+<div class="btns"><button onclick="applyBest()">Apply best quantum</button></div></div>
+<div class="panel"><h2>Round Robin vs FCFS</h2><div class="tw" id="cmp"></div></div>
+<div class="panel"><h2>Insights for this workload</h2><ul class="ins" id="ins"></ul></div>
+</div>
+<script>
+const $=id=>document.getElementById(id);
+const hue=i=>`hsl(${(i*53+235)%360} 58% 42%)`;
+let P=[],R=null,SW=[],best=1,T=0,timer=null,F=null;
+const PRE=[{q:3,cs:0,p:[[0,5],[1,3],[2,8],[3,6]]},{q:4,cs:0,p:[[0,20],[1,2],[2,3],[3,1]]},{q:2,cs:0,p:[[0,3],[10,4],[11,2],[20,5]]},{q:1,cs:1,p:[[0,6],[0,5],[1,4]]}];
+function met(L,end,sw){const n=L.length,s=k=>L.reduce((a,p)=>a+p[k],0);
+ const sl=L.map(p=>p.tat/p.bt);return{wt:s('wt')/n,tat:s('tat')/n,rt:s('rt')/n,end,sw,util:L.reduce((a,p)=>a+p.bt,0)/end,jain:sl.reduce((a,x)=>a+x,0)**2/(n*sl.reduce((a,x)=>a+x*x,0))}}
+function rr(ps,q,cs){
+ const L=ps.map(p=>({...p,rem:p.bt,st:null,ct:null})),ord=[...L].sort((a,b)=>a.at-b.at||a.id-b.id);
+ let t=0,ai=0,Q=[],seg=[],ev=[],msg=[],last=null,sw=0,done=0;
+ const arr=()=>{while(ai<ord.length&&ord[ai].at<=t){const p=ord[ai++];Q.push(p);ev.push({t:p.at,k:'q',p:p.id});msg.push({t:p.at,m:`P${p.id} arrives and joins the ready queue`})}};
+ arr();
+ while(done<L.length){
+  if(!Q.length){const nx=ord[ai].at;seg.push({k:'idle',s:t,e:nx});msg.push({t,m:`CPU idle until P${ord[ai].id} arrives at t=${nx}`});t=nx;last=null;arr();continue}
+  const p=Q.shift();ev.push({t,k:'d',p:p.id});
+  if(last!==null&&last!==p.id){sw++;if(cs>0){seg.push({k:'cs',s:t,e:t+cs});msg.push({t,m:`Context switch P${last} → P${p.id} costs ${cs}`});t+=cs;arr()}}
+  if(p.st===null)p.st=t;
+  const run=Math.min(q,p.rem);seg.push({k:'run',p:p.id,s:t,e:t+run});
+  msg.push({t,m:`P${p.id} gets the CPU for ${run} unit${run>1?'s':''} (${p.rem} remaining)`});
+  t+=run;p.rem-=run;last=p.id;arr();
+  if(p.rem>0){Q.push(p);ev.push({t,k:'q',p:p.id});msg.push({t,m:`P${p.id} is preempted with ${p.rem} left and goes to the back of the queue`})}
+  else{p.ct=t;done++;msg.push({t,m:`P${p.id} finishes at t=${t}`})}
+ }
+ L.forEach(p=>{p.tat=p.ct-p.at;p.wt=p.tat-p.bt;p.rt=p.st-p.at});
+ return{L,seg,ev,msg,...met(L,t,sw)};
+}
+function fcfs(ps,cs){
+ const L=ps.map(p=>({...p})).sort((a,b)=>a.at-b.at||a.id-b.id);let t=0,sw=0,last=null;
+ for(const p of L){if(t<p.at){t=p.at;last=null}if(last!==null){sw++;t+=cs}p.st=t;t+=p.bt;p.ct=t;last=p.id;p.tat=p.ct-p.at;p.wt=p.tat-p.bt;p.rt=p.st-p.at}
+ return met(L,t,sw);
+}
+function rows(){
+ $('rows').innerHTML=P.map((p,i)=>`<div class="pr"><span class="dot" style="background:${hue(p.id)}">P${p.id}</span>
+ <label>Arrival <input type="number" min="0" max="60" value="${p.at}" onchange="upd(${i},'at',this.value)"></label>
+ <label>Burst <input type="number" min="1" max="40" value="${p.bt}" onchange="upd(${i},'bt',this.value)"></label>
+ <button onclick="delP(${i})" aria-label="Remove P${p.id}" ${P.length<2?'disabled':''}>✕</button></div>`).join('');
+ $('addb').disabled=P.length>=8;
+}
+function upd(i,k,v){v=Math.round(+v)||0;P[i][k]=k==='at'?Math.max(0,Math.min(60,v)):Math.max(1,Math.min(40,v));rows();calc()}
+function addP(){P.push({id:P.length+1,at:rnd(6),bt:1+rnd(10)});rows();calc()}
+function delP(i){P.splice(i,1);P.forEach((p,j)=>p.id=j+1);rows();calc()}
+const rnd=n=>Math.floor(Math.random()*n);
+function rand(){const n=3+rnd(4);P=Array.from({length:n},(_,i)=>({id:i+1,at:rnd(10),bt:1+rnd(14)}));P[0].at=0;$('q').value=2+rnd(5);rows();calc()}
+function pre(i){const s=PRE[i];P=s.p.map((x,j)=>({id:j+1,at:x[0],bt:x[1]}));$('q').value=s.q;$('cs').value=s.cs;rows();calc()}
+function pause(){clearInterval(timer);timer=null;$('play').textContent=T>0&&T<R.end?'Resume':'Play'}
+function calc(){
+ pause();T=0;
+ const q=+$('q').value,cs=+$('cs').value;$('vq').textContent=q;$('vc').textContent=cs;$('vs').textContent=$('sp').value;
+ R=rr(P,q,cs);F=fcfs(P,cs);
+ const mx=Math.max(2,Math.min(20,Math.max(...P.map(p=>p.bt))));SW=[];
+ for(let k=1;k<=mx;k++){const r=rr(P,k,cs);SW.push({q:k,wt:r.wt,rt:r.rt})}
+ best=SW.reduce((b,x)=>x.wt<b.wt-1e-9?x:b,SW[0]).q;
+ $('play').textContent='Play';draw();static_();
+}
+function draw(){
+ const end=R.end,g=R.seg.find(s=>s.s<=T&&T<s.e);
+ $('clk').innerHTML=`t = ${T}<br><small>of ${end} time units</small>`;
+ $('cpu').innerHTML=g?(g.k==='run'?`<small>CPU running</small><span class="chip" style="background:${hue(g.p)}">P${g.p}</span> slice ${T-g.s} of ${g.e-g.s}<div class="bar"><i style="width:${(T-g.s)/(g.e-g.s)*100}%"></i></div>`:g.k==='cs'?`<small>CPU</small><b style="color:var(--bad)">Context switch (overhead)</b>`:`<small>CPU</small><b>Idle, waiting for a process to arrive</b>`):`<small>CPU</small><b>${T>=end?'All processes complete':'Press Play to start'}</b>`;
+ const Q=[];for(const e of R.ev){if(e.t>T)break;e.k==='q'?Q.push(e.p):Q.splice(Q.indexOf(e.p),1)}
+ $('rq').innerHTML=Q.length?Q.map(p=>`<span class="chip" style="background:${hue(p)}">P${p}</span>`).join('<span class="note">→</span>'):'<span class="note">empty</span>';
+ const U=Math.max(6,Math.min(44,Math.floor(700/end))),W=end*U+24;let s=`<svg width="${W}" height="78" viewBox="0 0 ${W} 78" role="img" aria-label="Gantt chart"><defs><pattern id="h" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="3" height="6" style="fill:var(--bad)"/></pattern></defs>`,lx=-99;
+ const lab=(x,t)=>{if(x-lx>=22){s+=`<text x="${x}" y="70" text-anchor="middle" class="tk">${t}</text>`;lx=x}};
+ for(const g of R.seg){if(g.s>=T)break;const e=Math.min(g.e,T),x=g.s*U+8,w=(e-g.s)*U;
+  if(g.k==='run')s+=`<rect x="${x}" y="8" width="${w}" height="44" rx="4" style="fill:${hue(g.p)}" stroke="var(--card)"/>${w>=26?`<text x="${x+w/2}" y="35" text-anchor="middle" class="gl">P${g.p}</text>`:''}`;
+  else if(g.k==='cs')s+=`<rect x="${x}" y="8" width="${w}" height="44" fill="url(#h)"/>`;
+  else s+=`<rect x="${x}" y="8" width="${w}" height="44" rx="4" style="fill:var(--line)" opacity=".6"/>`;
+  lab(x,g.s);lab(x+w,e)}
+ s+=`<line x1="${T*U+8}" x2="${T*U+8}" y1="2" y2="58" style="stroke:var(--ink);stroke-width:2"/></svg>`;$('gw').innerHTML=s;
+ const m=R.msg.filter(x=>x.t<=T).slice(-6);$('log').innerHTML=m.map(x=>`<div>t=${x.t}: ${x.m}</div>`).join('');
+ const ex=id=>R.seg.reduce((a,g)=>a+(g.k==='run'&&g.p===id?Math.max(0,Math.min(g.e,T)-g.s):0),0);
+ $('res').innerHTML='<table><tr><th>Process</th><th>Arrival</th><th>Burst</th><th>Progress</th><th>State</th><th>Completion</th><th>Turnaround</th><th>Waiting</th><th>Response</th></tr>'+R.L.map(p=>{
+  const e=ex(p.id),d=p.ct<=T,r=g&&g.k==='run'&&g.p===p.id,st=d?'done':r?'run':p.at>T?'':'';
+  return `<tr><td><span class="dot" style="background:${hue(p.id)}">P${p.id}</span></td><td>${p.at}</td><td>${p.bt}</td><td style="min-width:90px"><div class="bar"><i style="width:${e/p.bt*100}%;background:${hue(p.id)}"></i></div></td><td><span class="st ${st}">${d?'done':r?'running':p.at>T?'not arrived':'ready'}</span></td><td>${d?p.ct:'–'}</td><td>${d?p.tat:'–'}</td><td>${d?p.wt:'–'}</td><td>${p.st!==null&&p.st<=T?p.rt:'–'}</td></tr>`}).join('')+'</table>';
+ const f=x=>Math.round(x*100)/100;
+ $('stats').innerHTML=[['Avg waiting',f(R.wt)],['Avg turnaround',f(R.tat)],['Avg response',f(R.rt)],['Context switches',R.sw],['CPU utilization',Math.round(R.util*100)+'%'],['Fairness (Jain)',f(R.jain)]].map(([a,b])=>`<div class="stat"><small>${a}</small><strong>${b}</strong></div>`).join('');
+}
+function static_(){
+ const W=620,H=210,L=40,B=26,Tp=12,y=Math.max(...SW.map(x=>Math.max(x.wt,x.rt)))*1.12||1,n=SW.length,X=i=>L+(n>1?i/(n-1):0)*(W-L-14),Y=v=>H-B-(v/y)*(H-B-Tp);
+ const f=x=>Math.round(x*100)/100;let s='';
+ for(let i=0;i<=4;i++){const v=y*i/4;s+=`<line x1="${L}" x2="${W}" y1="${Y(v)}" y2="${Y(v)}" style="stroke:var(--line)" vector-effect="non-scaling-stroke"/><text x="4" y="${Y(v)+4}" class="tk">${f(v)}</text>`}
+ SW.forEach((d,i)=>{s+=`<text x="${X(i)}" y="${H-8}" text-anchor="middle" class="tk">${d.q}</text>`});
+ const cq=SW.findIndex(d=>d.q===+$('q').value);if(cq>=0)s+=`<line x1="${X(cq)}" x2="${X(cq)}" y1="${Tp}" y2="${H-B}" style="stroke:var(--ink)" stroke-dasharray="4 3" vector-effect="non-scaling-stroke"/>`;
+ for(const [k,c] of [['wt','--a'],['rt','--b']]){s+=`<polyline fill="none" style="stroke:var(${c});stroke-width:2.5" vector-effect="non-scaling-stroke" points="${SW.map((d,i)=>X(i)+','+Y(d[k])).join(' ')}"/>`+SW.map((d,i)=>`<circle cx="${X(i)}" cy="${Y(d[k])}" r="3.5" style="fill:var(${c})"/>`).join('')}
+ const bi=SW.findIndex(d=>d.q===best);s+=`<circle cx="${X(bi)}" cy="${Y(SW[bi].wt)}" r="8" fill="none" style="stroke:var(--ok);stroke-width:2.5"/>`;
+ $('chart').innerHTML=s;$('best').innerHTML=`<span class="win">Best quantum for waiting time: ${best}</span> (dashed line = current quantum ${$('q').value})`;
+ const cur=+$('q').value,rb=rr(P,best,+$('cs').value),row=(n,m,h)=>`<tr${h?' style="font-weight:700"':''}><td>${n}</td><td>${f(m.wt)}</td><td>${f(m.tat)}</td><td>${f(m.rt)}</td><td>${m.sw}</td><td>${f(m.end)}</td></tr>`;
+ $('cmp').innerHTML='<table><tr><th>Algorithm</th><th>Avg waiting</th><th>Avg turnaround</th><th>Avg response</th><th>Context switches</th><th>Finish time</th></tr>'+row(`Round Robin (q=${cur})`,R,1)+row(`Round Robin (best q=${best})`,rb)+row('FCFS (no preemption)',F)+'</table>';
+ const n2=P.length,mxb=Math.max(...P.map(p=>p.bt)),ov=R.seg.filter(g=>g.k==='cs').length*(+$('cs').value),I=[];
+ I.push(`<b>Fairness guarantee:</b> with ${n2} processes, none waits more than ${(n2-1)*cur} units between turns (n − 1) × q.`);
+ I.push(+$('cs').value?`<b>Switch overhead:</b> context switches consume ${Math.round(ov/R.end*100)}% of total time (${ov} of ${R.end} units).`:`<b>Switch overhead:</b> set a context-switch cost above 0 to see why a tiny quantum hurts.`);
+ I.push(cur>=mxb?`<b>Degenerate case:</b> the quantum is at least the longest burst, so Round Robin behaves like FCFS here.`:cur<=Math.ceil(mxb/5)?`<b>Very small quantum:</b> response is quick, but ${R.sw} context switches happen.`:`<b>Quantum choice:</b> a larger quantum lowers switching but raises response time.`);
+ I.push(R.rt<F.rt-1e-9?`<b>Versus FCFS:</b> Round Robin cuts average response time by ${Math.round((1-R.rt/F.rt)*100)}%, though average waiting is ${R.wt<=F.wt?'also lower':'higher by '+f(R.wt-F.wt)}.`:`<b>Versus FCFS:</b> on this workload Round Robin gives no response-time advantage.`);
+ $('ins').innerHTML=I.map(x=>`<li>${x}</li>`).join('');
+}
+function applyBest(){$('q').value=Math.min(12,best);calc()}
+function jump(t){T=Math.max(0,Math.min(R.end,t));if(T>=R.end)pause();draw()}
+$('play').onclick=()=>{if(timer){pause();return}if(T>=R.end)T=0;$('play').textContent='Pause';timer=setInterval(()=>jump(T+1),760-$('sp').value*65)};
+$('step').onclick=()=>{pause();const b=R.seg.flatMap(g=>[g.s,g.e]).filter(x=>x>T);jump(b.length?Math.min(...b):R.end);$('play').textContent='Resume'};
+$('fin').onclick=()=>{pause();jump(R.end)};
+$('rst').onclick=()=>{pause();jump(0);$('play').textContent='Play'};
+$('q').oninput=$('cs').oninput=calc;
+$('sp').oninput=()=>{$('vs').textContent=$('sp').value;if(timer){pause();$('play').click()}};
+pre(0);
+</script></body></html>
